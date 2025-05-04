@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat Zoom - 1 Página</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding-top: 50px; background: #f0f0f0; }
+    #chatBox { display: none; margin-top: 20px; }
+    #chatLog {
+      border: 1px solid #ccc;
+      height: 250px;
+      width: 90%;
+      max-width: 400px;
+      margin: auto;
+      overflow-y: auto;
+      padding: 10px;
+      background: #fff;
+      text-align: left;
+    }
+    .bot { color: blue; }
+    .sys { color: gray; font-style: italic; }
+  </style>
+</head>
+<body>
+
+<!-- NICKNAME ENTRADA -->
+<div id="nickBox">
+  <h2>Escolha seu nick (1 a 4 letras):</h2>
+  <input type="text" id="nickInput" maxlength="4" />
+  <br><br>
+  <a id="enterLink" href="#"><button>Entrar</button></a>
+</div>
+
+<!-- CHAT -->
+<div id="chatBox">
+  <h2>Chat Zoom</h2>
+  <div id="chatLog"></div>
+  <input type="text" id="msgInput" placeholder="Digite sua mensagem..." />
+  <button onclick="sendMsg()">Enviar</button>
+</div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const nick = params.get("nick");
+
+  if (nick && nick.length >= 1 && nick.length <= 4) {
+    document.getElementById("nickBox").style.display = "none";
+    document.getElementById("chatBox").style.display = "block";
+
+    const chatLog = document.getElementById("chatLog");
+    chatLog.innerHTML += `<div class="sys">${nick} entrou no chat</div>`;
+
+    window.sendMsg = function () {
+      const input = document.getElementById("msgInput");
+      const text = input.value.trim();
+      if (!text) return;
+
+      // Mostrar mensagem do usuário
+      chatLog.innerHTML += `<div><b>${nick}:</b> ${replaceEmojis(text)}</div>`;
+
+      // Comandos
+      if (text === "!comandos") {
+        bot(`Comandos disponíveis: !emoji, !horas, !zoom, !salada`);
+      } else if (text === "!emoji") {
+        bot("Use os emojis: :sorriso: :triste: :festa: :naufrago:");
+      } else if (text === "!horas") {
+        bot("Hora atual: " + new Date().toLocaleTimeString());
+      } else if (text === "!zoom") {
+        bot("Você está no Zoom Chat - versão local.");
+      } else if (text === "!salada") {
+        bot(`Salada Musical: <a href="https://radiozoom.fm" target="_blank">Ouça aqui</a>`);
+      }
+
+      input.value = "";
+      chatLog.scrollTop = chatLog.scrollHeight;
+    };
+
+    function bot(msg) {
+      chatLog.innerHTML += `<div class="bot"><b>Bot:</b> ${msg}</div>`;
+    }
+
+    function replaceEmojis(text) {
+      return text
+        .replace(/:sorriso:/g, "😊")
+        .replace(/:triste:/g, "😢")
+        .replace(/:festa:/g, "🥳")
+        .replace(/:naufrago:/g, "🫠");
+    }
+  }
+
+  // Gerar href dinâmico com nick
+  const input = document.getElementById("nickInput");
+  const link = document.getElementById("enterLink");
+  input.addEventListener("input", () => {
+    const val = input.value.trim();
+    if (val.length >= 1 && val.length <= 4) {
+      link.href = `?nick=${encodeURIComponent(val)}`;
+    } else {
+      link.href = "#";
+    }
+  });
+</script>
+
+</body>
+</html>
+
