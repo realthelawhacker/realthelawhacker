@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chat Moderno com IA</title>
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <!-- Font Awesome -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js" integrity="sha512-dP4xXun8wQj/Q6jVg7l1GuKoiF1PzcdOy8mh4B0Gkq/6c5aXoIYC7zttF96klQ+gZPBzvHFNxb3G2XqS7OGVQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <style>
+    :root {
+      --primary: #04CB28;
+      --user-bg: #D1F4FF;
+      --other-bg: #E2FFE8;
+      --font-sans: 'Roboto', sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body, html {
+      height: 100%; margin: 0;
+      font-family: var(--font-sans);
+      background: #f0f2f5;
+    }
+    .login-screen, .chat-screen {
+      height: 100%; display: flex;
+      align-items: center; justify-content: center;
+    }
+    .card-login {
+      width: 100%; max-width: 400px;
+      border-radius: 1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .chat-container {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+    }
+    .chat-header {
+      background: var(--primary);
+      color: #fff; padding: .75rem 1.5rem;
+      position: relative; flex-shrink: 0;
+    }
+    .chat-header .logout {
+      position: absolute; right: 1rem; top: .75rem;
+      cursor: pointer; font-size: 1rem;
+    }
+    .rooms-bar {
+      padding: .5rem; background: #fff;
+      display: flex; gap: .5rem; justify-content: center;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .rooms-bar .btn-room.active {
+      background: var(--primary); color: #fff;
+    }
+    #mensagenss {
+      flex: 1; overflow-y: auto;
+      padding: 1rem; display: flex;
+      flex-direction: column; gap: .5rem;
+      background: #e9ebee;
+    }
+    .msg {
+      max-width: 70%; padding: .75rem 1rem;
+      border-radius: 1rem; position: relative;
+      word-break: break-word;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .msg-user { background: var(--user-bg); align-self: flex-end; border-bottom-right-radius: 0; }
+    .msg-other { background: var(--other-bg); align-self: flex-start; border-bottom-left-radius: 0; }
+    .msg .nick { font-size: .75rem; font-weight: 600; margin-bottom: .25rem; }
+    .msg .status { font-size: .65rem; color: #555; margin-top: .25rem; }
+    .msg .actions {
+      position: absolute; bottom: .25rem; right: .5rem;
+      font-size: .65rem; color: #555; display: flex; gap: .5rem;
+    }
+    .msg img { max-width: 200px; border-radius: .5rem; }
+    .input-area {
+      flex-shrink: 0; background: #fff;
+      padding: .75rem 1rem; display: flex; gap: .5rem;
+      align-items: center; border-top: 1px solid #e0e0e0;
+    }
+    .input-area .form-control {
+      border-radius: 2rem;
+      flex: 1; padding: .5rem 1rem;
+    }
+    .input-area .btn-send {
+      border-radius: 2rem; padding: .5rem 1rem;
+    }
+    .input-area input[type=file] {
+      display: none;
+    }
+    .input-area label {
+      cursor: pointer; font-size: 1.25rem; color: #555;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div id="login" class="login-screen">
+    <div class="card card-login p-4">
+      <h5 class="text-center mb-4">Entrar no Chat</h5>
+      <div class="mb-3">
+        <input id="nick" type="text" class="form-control" placeholder="Nick (até 8 chars)" maxlength="8">
+      </div>
+      <div class="mb-3">
+        <input id="email" type="email" class="form-control" placeholder="Email válido">
+      </div>
+      <div class="mb-4">
+        <input id="senha" type="password" class="form-control" placeholder="Senha">
+      </div>
+      <button id="btnEntrar" class="btn btn-success w-100">Entrar</button>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div id="chat" class="chat-screen" style="display:none">
+    <div class="chat-container">
+      <div class="chat-header">
+        Chat Moderno
+        <i class="fas fa-sign-out-alt logout" onclick="doLogout()"></i>
+      </div>
+      <div class="rooms-bar">
+        <button class="btn btn-outline-primary btn-room active" data-room="Sala1">Sala 1</button>
+        <button class="btn btn-outline-primary btn-room" data-room="Sala2">Sala 2</button>
+        <button class="btn btn-outline-primary btn-room" data-room="Sala3">Sala 3</button>
+      </div>
+      <div id="mensagens"></div>
+      <div class="input-area">
+        <button class="btn btn-light" id="btnImg" title="Enviar imagem">
+          <i class="fas fa-image"></i>
+        </button>
+        <input type="file" id="imgInput" accept="image/*">
+        <input id="mensagem" type="text" class="form-control" placeholder="Digite uma mensagem…">
+        <button class="btn btn-primary btn-send" id="btnSend">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script>
+    // elementos
+    const loginDiv = document.getElementById('login'),
+          chatDiv  = document.getElementById('chat'),
+          btnEntrar= document.getElementById('btnEntrar'),
+          btnSend  = document.getElementById('btnSend'),
+          btnImg   = document.getElementById('btnImg'),
+          imgInput = document.getElementById('imgInput'),
+          mensagemInput = document.getElementById('mensagem'),
+          mensagensEl   = document.getElementById('mensagens'),
+          roomsBtns     = document.querySelectorAll('.btn-room');
+
+    let usuario = JSON.parse(localStorage.getItem('usuario')) || null,
+        salas   = JSON.parse(localStorage.getItem('salas'))   || {},
+        audio    = new Audio('https://www.soundjay.com/button/beep-07.wav');
+
+    // UTILS
+    function saveState() {
+      localStorage.setItem('usuario', JSON.stringify(usuario));
+      localStorage.setItem('salas', JSON.stringify(salas));
+    }
+    function validaEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+    function scrollBottom() {
+      mensagensEl.scrollTop = mensagensEl.scrollHeight;
+    }
+
+    // RENDER
+    function renderMensagens() {
+      mensagensEl.innerHTML = '';
+      let msgs = salas[usuario.room] || [];
+      msgs.forEach((m,i) => {
+        let div = document.createElement('div');
+        div.className = 'msg ' + (m.email===usuario.email ? 'msg-user':'msg-other');
+        let html = `<div class="nick">${m.nick}</div>`;
+        if (m.img) html += `<img src="${m.img}">`;
+        else       html += `<div>${m.text}</div>`;
+        if (m.edited) html += `<div class="status">(editada)</div>`;
+        if (m.deleted) html += `<div class="status"><i class="fas fa-times"></i> mensagem apagada</div>`;
+        if (m.email===usuario.email && !m.deleted) {
+          html += `<div class="actions">
+                     <span onclick="doEdit(${i})"><i class="fas fa-edit"></i></span>
+                     <span onclick="doDelete(${i})"><i class="fas fa-trash"></i></span>
+                   </div>`;
+        }
+        div.innerHTML = html;
+        mensagensEl.appendChild(div);
+      });
+      scrollBottom();
+    }
+
+    // LOGIN
+    btnEntrar.onclick = () => {
+      let nick = document.getElementById('nick').value.trim(),
+          email= document.getElementById('email').value.trim(),
+          senha= document.getElementById('senha').value;
+      if (!nick||nick.length>8||!validaEmail(email)||!senha) {
+        return alert('Preencha corretamente: nick≤8 caract., email válido e senha.');
+      }
+      // novo usuário?
+      usuario = { nick,email,senha,room:'Sala1' };
+      salas[usuario.room] = salas[usuario.room]||[];
+      saveState();
+      loginDiv.style.display='none';
+      chatDiv.style.display='flex';
+      renderMensagens();
+    };
+    // auto-login
+    if (usuario) {
+      document.getElementById('nick').value=usuario.nick;
+      document.getElementById('email').value=usuario.email;
+      loginDiv.style.display='none';
+      chatDiv.style.display='flex';
+      renderMensagens();
+    }
+
+    // TROCAR SALA
+    roomsBtns.forEach(btn=>{
+      btn.onclick = () => {
+        roomsBtns.forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        usuario.room = btn.dataset.room;
+        salas[usuario.room] = salas[usuario.room]||[];
+        saveState();
+        renderMensagens();
+      };
+    });
+
+    // ENVIAR MENSAGEM / IMAGEM
+    btnImg.onclick = ()=> imgInput.click();
+    imgInput.onchange = ()=> {
+      let file = imgInput.files[0];
+      if (!file) return;
+      let reader = new FileReader();
+      reader.onload = ()=> sendMessage('', reader.result);
+      reader.readAsDataURL(file);
+    };
+    btnSend.onclick = ()=> sendMessage(mensagemInput.value.trim(), null);
+    function sendMessage(text, img) {
+      if (!text && !img) return;
+      salas[usuario.room].push({
+        nick:usuario.nick,email:usuario.email,
+        text,text,img,
+        edited:false,deleted:false
+      });
+      saveState();
+      renderMensagens();
+      mensagemInput.value='';
+      audio.play();
+      // IA simples
+      setTimeout(()=> {
+        let reply = 'Você disse: "' + (text||'[imagem]') + '"';
+        salas[usuario.room].push({
+          nick:'ChatBot',email:'bot@ai',
+          text:reply,img:null,
+          edited:false,deleted:false
+        });
+        saveState();
+        renderMensagens();
+        audio.play();
+      }, 800);
+    }
+
+    // EDITAR / APAGAR
+    function doEdit(i) {
+      let m = salas[usuario.room][i];
+      let novo = prompt('Editar:', m.text);
+      if (novo!=null) {
+        m.text = novo; m.edited = true;
+        saveState(); renderMensagens();
+      }
+    }
+    function doDelete(i) {
+      let m = salas[usuario.room][i];
+      m.deleted = true; m.text='';
+      saveState(); renderMensagens();
+    }
+
+    // LOGOUT / LIMPAR CHAT
+    function doLogout() {
+      if (confirm('Limpar histórico nesta sala?')) {
+        salas[usuario.room] = [];
+        saveState();
+      }
+      localStorage.removeItem('usuario');
+      location.reload();
+    }
+    window.addEventListener('beforeunload', e=>{
+      if (confirm('Limpar histórico nesta sala?')) {
+        salas[usuario.room]=[]; saveState();
+      }
+    });
+  </script>
+  <!-- Bootstrap 5 script -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
